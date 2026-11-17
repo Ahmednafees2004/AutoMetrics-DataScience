@@ -50,3 +50,6 @@ data/**/*
 .env.*
 .DS_Store
 Thumbs.db
+
+data/raw/cars_dataset.csv
+
