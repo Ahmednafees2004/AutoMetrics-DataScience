@@ -50,3 +50,7 @@ data/**/*
 .env.*
 .DS_Store
 Thumbs.db
+
+# Big Data Files
+data/raw/cars_dataset.csv
+
