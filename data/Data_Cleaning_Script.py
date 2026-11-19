@@ -1,43 +1,61 @@
+from pathlib import Path
 import pandas as pd
 
-#Load the dataset
-file_path = "cars_dataset_edited.csv.xlsx"
-df = pd.read_excel(file_path)
+# Find the data folder relative to this script, not the launch directory.
+data_folder = Path(__file__).resolve().parent
+file_path = data_folder / 'raw' / 'cars_dataset_edited.csv.xlsx'
+output_path = data_folder / 'processed' / 'cars_dataset_cleaned.xlsx'
 
-#Clean string columns FIRST (strip whitespace so groupings work properly)
+# Read the original workbook. It is never used as an output file.
+df = pd.read_excel(file_path)
+before = {
+    'Rows': len(df),
+    'Columns': len(df.columns),
+    'Missing values': int(df.isna().sum().sum()),
+    'Duplicate rows': int(df.duplicated().sum())
+}
+missing_before = df.isna().sum()
+
+# Trim extra spaces without turning missing text into the word "nan".
+# Treat empty or whitespace-only text as missing. Keep original spelling
+# and capitalization: changing names such as BMW or CX-5 could be misleading.
 string_cols = ['vehicle_id', 'make', 'model', 'model_variant', 'body_type']
 for col in string_cols:
     if col in df.columns:
-        df[col] = df[col].astype(str).str.strip()
+        df[col] = df[col].astype('string').str.strip()
+        df[col] = df[col].replace('', pd.NA)
 
-
-print(f"Duplicates Found: {df.duplicated().sum()}")
-
+# Remove only exact repeated rows after trimming text. Keep all columns.
+# A repeated vehicle ID alone is not enough reason to delete a record.
+duplicates_removed = int(df.duplicated().sum())
 df = df.drop_duplicates()
 
-#Fill missing model variants
-df['model_variant'] = df['model_variant'].fillna('Standard')
+# Leave unknown values missing. A missing variant does not mean "Standard".
+# Median-filled prices could reduce variation and distort brand comparisons.
+# Reliability estimates could also change relationships in later analysis.
+# The team should agree on any imputation before adding it here.
 
-#Impute prices using grouped medians by make and model
-df['original_price'] = df['original_price'].fillna(
-    df.groupby(['make', 'model'])['original_price'].transform('median')
-)
-df['original_price'] = df['original_price'].fillna(df['original_price'].median())
+# Flag possible problems for review; do not replace prices or remove outliers.
+print('\nPrice values needing review:')
+for col in ['original_price', 'msrp']:
+    print(f'{col}: {df[col].isna().sum()} missing, '
+          f'{(df[col] == 0).sum()} zero, {(df[col] < 0).sum()} negative')
+print(f'Repeated vehicle IDs after cleaning: {df["vehicle_id"].duplicated().sum()}')
 
-df['msrp'] = df['msrp'].fillna(
-    df.groupby(['make', 'model'])['msrp'].transform('median')
-)
-df['msrp'] = df['msrp'].fillna(df['msrp'].median())
+# Save a separate cleaned workbook. Future runs replace only this output.
+output_path.parent.mkdir(parents=True, exist_ok=True)
+df.to_excel(output_path, index=False)
 
-#Impute reliability score using grouped median by make
-df['reliability_score'] = df['reliability_score'].fillna(
-    df.groupby('make')['reliability_score'].transform('median')
-)
-df['reliability_score'] = df['reliability_score'].fillna(df['reliability_score'].median())
-
-
-#Save the cleaned dataset
-df.to_excel('cars_dataset_cleaned.xlsx', index=False)
-print("Data cleaning complete. Cleaned file saved as 'cars_dataset_cleaned.xlsx'.")
-
-
+# Show what changed, including missing values in each column.
+after = {
+    'Rows': len(df),
+    'Columns': len(df.columns),
+    'Missing values': int(df.isna().sum().sum()),
+    'Duplicate rows': int(df.duplicated().sum())
+}
+print('\nBefore-and-after summary:')
+print(pd.DataFrame({'Before': before, 'After': after}))
+print(f'\nExact duplicate rows removed: {duplicates_removed}')
+print('\nMissing values by column:')
+print(pd.DataFrame({'Before': missing_before, 'After': df.isna().sum()}))
+print(f'\nData cleaning complete. Saved to: {output_path}')
