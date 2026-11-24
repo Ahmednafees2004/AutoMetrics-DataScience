@@ -54,3 +54,8 @@ Thumbs.db
 # Big Data Files
 data/raw/cars_dataset.csv
 
+
+# Local historical notebook copies and validation runs
+notebooks/backups/
+review_validation/
+*_backup.ipynb
