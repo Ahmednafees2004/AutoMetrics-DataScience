@@ -3,11 +3,15 @@ import pandas as pd
 
 # Find the data folder relative to this script, not the launch directory.
 data_folder = Path(__file__).resolve().parent
-file_path = data_folder / 'raw' / 'cars_dataset_edited.csv.xlsx'
-output_path = data_folder / 'processed' / 'cars_dataset_cleaned.xlsx'
+print("SCRIPT DIRECTORY", data_folder)
+file_path = data_folder / 'raw' / 'cars_dataset.csv'
+print("FILE PATH", file_path)
+output_path = data_folder / 'processed' / 'cars_dataset_cleaned.csv'
+print("OUTPUT PATH", output_path)
+
 
 # Read the original workbook. It is never used as an output file.
-df = pd.read_excel(file_path)
+df = pd.read_csv(file_path)
 before = {
     'Rows': len(df),
     'Columns': len(df.columns),
@@ -44,7 +48,7 @@ print(f'Repeated vehicle IDs after cleaning: {df["vehicle_id"].duplicated().sum(
 
 # Save a separate cleaned workbook. Future runs replace only this output.
 output_path.parent.mkdir(parents=True, exist_ok=True)
-df.to_excel(output_path, index=False)
+df.to_csv(output_path, index=False)
 
 # Show what changed, including missing values in each column.
 after = {
